@@ -60,6 +60,7 @@ mod sched;
 mod smp;
 mod syscall;
 mod time;
+mod namespace;
 
 #[cfg(target_arch = "x86_64")]
 mod virt;
