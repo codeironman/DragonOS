@@ -648,7 +648,7 @@ pub struct ProcessControlBlock {
     robust_list: RwLock<Option<RobustListHead>>,
 
     /// namespace的指针
-    nsproxy: Arc<NsProxy>,
+    nsproxy: Arc<RwLock<NsProxy>>,
 }
 
 impl ProcessControlBlock {
@@ -706,6 +706,7 @@ impl ProcessControlBlock {
             .map(|p| Arc::downgrade(&p))
             .unwrap_or_default();
         let pid_strcut = PidStrcut::new();
+        let pid_strcut = PidStrcut::new();
         let pcb = Self {
             pid,
             tgid: pid,
@@ -728,7 +729,7 @@ impl ProcessControlBlock {
             thread: RwLock::new(ThreadInfo::new()),
             alarm_timer: SpinLock::new(None),
             robust_list: RwLock::new(None),
-            nsproxy: Arc::new(NsProxy::new()),
+            nsproxy: Arc::new(RwLock::new(NsProxy::new())),
         };
 
         // 初始化系统调用栈
@@ -999,8 +1000,12 @@ impl ProcessControlBlock {
         return self.alarm_timer.lock_irqsave();
     }
 
-    pub fn get_nsproxy(&self) -> Arc<NsProxy> {
+    pub fn get_nsproxy(&self) -> Arc<RwLock<NsProxy>> {
         self.nsproxy.clone()
+    }
+
+    pub fn set_nsproxy(&self, nsprsy: NsProxy) {
+        *self.nsproxy.write() = nsprsy;
     }
 }
 
