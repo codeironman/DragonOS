@@ -1,3 +1,5 @@
+#![allow(dead_code, unused_variables, unused_imports)]
+
 use alloc::vec::Vec;
 use core::{hash::Hash, sync::atomic::AtomicU32};
 use system_error::SystemError;
@@ -7,9 +9,9 @@ use hashbrown::HashMap;
 use log::warn;
 
 use super::user_namespace::UserNamespace;
+use crate::libs::mutex::Mutex;
 use crate::namespace::ucount::RlimiType::UcountRlimitCounts;
 use crate::namespace::ucount::UcountType::UcountCounts;
-use crate::{include::bindings::bindings::uid_t, libs::mutex::Mutex};
 
 #[derive(Clone, Copy)]
 pub enum UcountType {
@@ -41,7 +43,7 @@ pub struct UCounts {
     /// 对应的user_namespace
     ns: Arc<UserNamespace>,
     /// 用户标识符
-    uid: uid_t,
+    uid: usize,
     count: AtomicU32,
     ucount: Vec<AtomicU32>, //[AtomicU32; UCOUNT_COUNTS as usize],
     rlimit: Vec<AtomicU32>, //[AtomicU32; UCOUNT_RLIMIT_COUNTS as usize],
@@ -62,7 +64,7 @@ impl UCounts {
         })
     }
 
-    fn alloc_ucounts(&self, ns: Arc<UserNamespace>, uid: uid_t) -> Arc<Self> {
+    fn alloc_ucounts(&self, ns: Arc<UserNamespace>, uid: usize) -> Arc<Self> {
         let mut counts = COUNT_MANAGER.counts.lock();
         let key = UKey {
             user_ns: ns.clone(),
@@ -92,7 +94,7 @@ impl UCounts {
     pub fn inc_ucounts(
         &self,
         user_ns: Arc<UserNamespace>,
-        uid: uid_t,
+        uid: usize,
         ucount_type: UcountType,
     ) -> Option<Arc<UCounts>> {
         let uc_type = ucount_type as usize;
@@ -114,7 +116,7 @@ impl UCounts {
         return Some(uc);
     }
 
-    fn find_ucounts(user_ns: Arc<UserNamespace>, uid: uid_t) -> Option<Arc<UCounts>> {
+    fn find_ucounts(user_ns: Arc<UserNamespace>, uid: usize) -> Option<Arc<UCounts>> {
         let counts = COUNT_MANAGER.counts.lock();
         let key = UKey { user_ns, uid };
         if let Some(uc) = counts.get(&key) {
@@ -157,7 +159,7 @@ impl UCounts {
 }
 struct UKey {
     user_ns: Arc<UserNamespace>,
-    uid: uid_t,
+    uid: usize,
 }
 
 impl Hash for UKey {

@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_variables, unused_imports)]
 use core::sync::atomic::AtomicU64;
 use core::sync::atomic::Ordering;
 
@@ -24,7 +25,7 @@ use crate::libs::wait_queue::WaitQueue;
 use crate::process::fork::CloneFlags;
 use crate::process::ProcessManager;
 use crate::syscall::Syscall;
-
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct MntNamespace {
     /// namespace 共有的部分
@@ -181,7 +182,7 @@ impl MntNamespace {
     ) -> Result<Option<Arc<UCounts>>, SystemError> {
         Ok(self
             .ucounts
-            .inc_ucounts(user_ns, Syscall::geteuid()? as u32, UcountMntNamespaces))
+            .inc_ucounts(user_ns, Syscall::geteuid()?, UcountMntNamespaces))
     }
 
     pub fn dec_mnt_namespace(&self, uc: Arc<UCounts>) {

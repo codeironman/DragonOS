@@ -1,3 +1,5 @@
+#![allow(dead_code, unused_variables, unused_imports)]
+
 use core::fmt::Debug;
 
 use crate::filesystem::vfs::{IndexNode, ROOT_INODE};

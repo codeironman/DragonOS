@@ -1,3 +1,5 @@
+#![allow(dead_code, unused_variables, unused_imports)]
+
 use alloc::vec::Vec;
 
 use super::namespace::Namespace;
@@ -6,7 +8,6 @@ use super::NsSet;
 use super::{namespace::NsCommon, ucount::UCounts, user_namespace::UserNamespace};
 use crate::container_of;
 use crate::filesystem::vfs::{IndexNode, ROOT_INODE};
-use crate::include::bindings::bindings::INT16_MAX;
 use crate::namespace::namespace::NsOperations;
 use crate::process::fork::CloneFlags;
 use crate::process::ProcessManager;
@@ -20,14 +21,15 @@ use ida::IdAllocator;
 use system_error::SystemError;
 use system_error::SystemError::ENOSPC;
 
+const INT16_MAX: u32 = 32767;
 const MAX_PID_NS_LEVEL: usize = 32;
 const PIDNS_ADDING: u32 = 1 << 31;
 const PID_MAX: usize = 4096;
-static PID_IDA: ida::IdAllocator = ida::IdAllocator::new(1, usize::MAX);
+static PID_IDA: ida::IdAllocator = ida::IdAllocator::new(1, usize::MAX).unwrap();
 #[derive(Debug)]
 #[repr(C)]
 pub struct PidNamespace {
-    id_alloctor: IdAllocator,
+    id_alloctor: RwLock<IdAllocator>,
     /// 已经分配的进程数
     pid_allocated: u32,
     /// 当前的pid_namespace所在的层数
@@ -88,10 +90,13 @@ impl PidStrcut {
             let mut nr = tid;
             if tid == 0 {
                 if let Some(ns) = pid_ns {
-                    nr = if ns.id_alloctor.get_max_id() > PID_MAX {
+                    nr = if ns.id_alloctor.read().get_max_id() > PID_MAX {
                         PID_MAX
                     } else {
-                        ns.id_alloctor.alloc().expect("No more id to allocate.")
+                        ns.id_alloctor
+                            .write()
+                            .alloc()
+                            .expect("No more id to allocate.")
                     };
                     pid_ns = ns.parent.clone();
                 } else {
@@ -200,7 +205,7 @@ impl NsOperations for PidNsOperations {
 impl PidNamespace {
     pub fn new() -> Result<Self, SystemError> {
         Ok(Self {
-            id_alloctor: IdAllocator::new(1, PID_MAX),
+            id_alloctor: RwLock::new(IdAllocator::new(1, PID_MAX).unwrap()),
             pid_allocated: 0,
             level: 0,
             child_reaper: Arc::new(RwLock::new(PidStrcut::new())),
@@ -232,14 +237,13 @@ impl PidNamespace {
         let ns_common = Arc::new(NsCommon::new(Box::new(PidNsOperations::new(
             "pid".to_string(),
         )))?);
-        let stashed = ROOT_INODE().find("proc")?;
         let child_reaper = if let Some(parent_ns) = &parent {
             parent_ns.child_reaper.clone()
         } else {
             Arc::new(RwLock::new(PidStrcut::new()))
         };
         Ok(Self {
-            id_alloctor: IdAllocator::new(1, PID_MAX),
+            id_alloctor: RwLock::new(IdAllocator::new(1, PID_MAX).unwrap()),
             pid_allocated: PIDNS_ADDING,
             level,
             ucounts,
@@ -256,7 +260,7 @@ impl PidNamespace {
     ) -> Result<Option<Arc<UCounts>>, SystemError> {
         Ok(self
             .ucounts
-            .inc_ucounts(user_ns, Syscall::geteuid()? as u32, UcountPidNamespaces))
+            .inc_ucounts(user_ns, Syscall::geteuid()?, UcountPidNamespaces))
     }
 
     pub fn dec_pid_namespaces(&mut self, uc: Arc<UCounts>) {

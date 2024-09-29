@@ -1,4 +1,7 @@
-#[allow(dead_code)]
+#![allow(dead_code, unused_variables, unused_imports)]
+
+use core::u32;
+
 use alloc::boxed::Box;
 
 use crate::libs::rwlock::RwLock;
@@ -8,7 +11,6 @@ use alloc::string::ToString;
 use alloc::vec::Vec;
 use system_error::SystemError;
 
-use crate::include::bindings::bindings::{gid_t, uid_t, UINT32_MAX};
 use crate::namespace::namespace::NsCommon;
 use crate::namespace::ucount::UCounts;
 use crate::process::fork::CloneFlags;
@@ -21,6 +23,7 @@ use super::ucount::UcountType::UcountCounts;
 const UID_GID_MAP_MAX_BASE_EXTENTS: usize = 5;
 const UCOUNT_MAX: u32 = 62636;
 /// 管理用户ID和组ID的映射
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 struct UidGidMap {
     nr_extents: u32,
@@ -28,6 +31,7 @@ struct UidGidMap {
 }
 
 ///区间映射
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 struct UidGidExtent {
     first: u32,
@@ -42,8 +46,8 @@ pub struct UserNamespace {
     ///项目ID映射
     parent: Option<Arc<UserNamespace>>,
     level: u32,
-    owner: uid_t,
-    group: gid_t,
+    owner: usize,
+    group: usize,
     ns_common: Arc<NsCommon>,
     flags: u32,
     pid: Arc<RwLock<Pid>>,
@@ -99,7 +103,7 @@ impl UidGidExtent {
         Self {
             first: 0,
             lower_first: 0,
-            count: UINT32_MAX,
+            count: u32::MAX,
         }
     }
 }
